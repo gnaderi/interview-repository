@@ -3,3 +3,7 @@
 out/
 *.iml
 build/
+
+# Ignore my ENV files.
+.DS_Store
+.idea
