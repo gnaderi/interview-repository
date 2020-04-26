@@ -4,15 +4,17 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class HandProcessorImpl implements HandProcessor {
+    private static final int PRIORITY_FACTOR = 10;
+
     /**
-     * Get the type of the player's hand (e.g. royal flush).
+     * Get the type of the player's hand (e.g. royal flush). Score the hand if has same type of hand.
      *
      * @return HandEvaluationResult
      */
     @Override
     public HandEvaluationResult evaluate(List<Card> hand) {
         // Analyze hand card
-        HandDetails handDetails = new HandDetails(hand.toArray(new Card[0]));
+        HandDetails handDetails = new HandDetails(hand);
         HandEvaluationResult handResult = new HandEvaluationResult();
         Map<CardRank, Integer> ranks = handDetails.cardRanks;
 
@@ -30,7 +32,7 @@ public class HandProcessorImpl implements HandProcessor {
         }
         if (handDetails.rankCounts[0] == 4) {
             CardRank card = ranks.entrySet().stream().filter(e -> e.getValue() == 4).findFirst().get().getKey();
-            int score = (card.rankValue + 100) * 4;
+            int score = card.rankValue * 4 * PRIORITY_FACTOR;
             card = ranks.entrySet().stream().filter(e -> e.getValue() == 1).findFirst().get().getKey();
             score += card.rankValue;
             handResult.setScore(score);
@@ -39,7 +41,7 @@ public class HandProcessorImpl implements HandProcessor {
         }
         if (handDetails.totalRanks == 2 && handDetails.rankCounts[0] == 3 && handDetails.rankCounts[1] == 2) {
             CardRank card = ranks.entrySet().stream().filter(e -> e.getValue() == 3).findFirst().get().getKey();
-            int score = card.rankValue * 3 * 10;
+            int score = card.rankValue * 3 * PRIORITY_FACTOR;
             card = ranks.entrySet().stream().filter(e -> e.getValue() == 2).findFirst().get().getKey();
             score += card.rankValue * 2;
             handResult.setScore(score);
@@ -107,29 +109,24 @@ class HandDetails {
      */
     final int totalSuits;
 
-    protected HandDetails(Card[] cards) {
+    protected HandDetails(List<Card> cards) {
         // get rank & suit counts
         HashMap<SuitType, Integer> suits = new HashMap<>();
         cardRanks = new HashMap<>();
-        for (Card card : cards) {
+        cards.forEach(card -> {
             cardRanks.put(card.getCardRank(), cardRanks.containsKey(card.getCardRank()) ? cardRanks.get(card.getCardRank()) + 1 : 1);
             suits.put(card.getSuitType(), suits.containsKey(card.getSuitType()) ? suits.get(card.getSuitType()) + 1 : 1);
-        }
+        });
 
         // save metrics
         this.totalRanks = cardRanks.size();
         this.totalSuits = suits.size();
 
         // save rank counts
-        {
-            List<Integer> values = new ArrayList<>(cardRanks.values());
-            values.sort((a, b) -> b - a); // sort in descending order
-
-            int size = values.size();
-            this.rankCounts = new int[size];
-            for (int i = 0; i < size; i++)
-                this.rankCounts[i] = values.get(i);
-        }
+        List<Integer> values = cardRanks.values().stream().sorted((a, b) -> b - a).collect(Collectors.toList());// sort in descending order
+        this.rankCounts = new int[values.size()];
+        for (int i = 0; i < values.size(); i++)
+            this.rankCounts[i] = values.get(i);
     }
 }
 
